@@ -7,12 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
-  posts     Post[]
-  schedules Schedule[]
-  createdAt DateTime   @default(now())
+  id                 String             @id @default(cuid())
+  email              String             @unique
+  posts              Post[]
+  schedules          Schedule[]
+  subscriptionId     String?            @unique
+  subscriptionStatus SubscriptionStatus  @default(INACTIVE)
+  currentPeriodEnd   DateTime?
+  stripeCustomerId   String?            @unique
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  tokenUsage         TokenUsage[]
+
+
+  @@map("users")
 }
 
 model Post {
@@ -36,4 +54,20 @@ model Schedule {
 
   user       User       @relation(fields: [userId], references: [id])
   post       Post       @relation(fields: [postId], references: [id])
+}
+
+model TokenUsage {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  tokens           Int
+  promptTokens     Int
+  completionTokens Int
+  model           String
+  createdAt        DateTime @default(now())
+  postId          String?
+  post            Post?    @relation(fields: [postId], references: [id])
+
+  @@index([userId, createdAt])
+  @@map("token_usage")
 }
